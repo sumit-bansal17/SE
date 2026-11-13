@@ -4,55 +4,39 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: ['class', '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
-        brand: {
-          DEFAULT: '#4F46E5',
-          hover: '#4338CA',
-          light: 'var(--c-brand-light)',
-          soft: 'var(--c-brand-soft)',
+        primary: {
+          DEFAULT: '#640000', // Academic Maroon
+          contrast: '#FFFFFF',
         },
-        surface: {
-          DEFAULT: 'var(--c-surface)',
-          card: 'var(--c-surface-card)',
-          muted: 'var(--c-surface-muted)',
-          light: 'var(--c-surface-light)',
+        secondary: '#333333', // Charcoal
+        tertiary: '#313131', // Darker charcoal for solid buttons
+        neutral: {
+          DEFAULT: '#E5E7EB', // Subtle borders
+          100: '#F3F4F6',
+          200: '#E5E7EB',
+          300: '#D1D5DB',
         },
-        ink: {
-          DEFAULT: 'var(--c-ink)',
-          secondary: 'var(--c-ink-secondary)',
-          subtle: 'var(--c-ink-subtle)',
-          muted: 'var(--c-ink-muted)',
-          light: 'var(--c-ink-light)',
-          border: 'var(--c-ink-border)',
-          divider: 'var(--c-ink-divider)',
-          accent: 'var(--c-ink-accent)',
-        },
-        success: {
-          DEFAULT: '#16a34a',
-          mid: '#059669',
-          soft: '#d1fae5',
-        },
-        danger: {
-          DEFAULT: '#dc2626',
-          alt: '#ef4444',
-          soft: '#fee2e2',
-        },
-        warning: {
-          DEFAULT: '#d97706',
-          soft: '#ffedd5',
-        }
+        surface: '#FFFFFF',
+        'on-surface': '#333333',
+        background: '#FFFFFF',
+        error: '#B00020',
+        muted: '#F5F1EA', // Warm off-white
       },
       fontFamily: {
-        jakarta: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-        inter: ['Inter', 'system-ui', 'sans-serif'],
+        roboto: ['Roboto', 'sans-serif'],
+        sans: ['Roboto', 'sans-serif'],
       },
       borderRadius: {
-        '2xl': '1rem',
-        '3xl': '1.5rem',
-      }
+        none: '0px',
+        sm: '4px',
+        md: '8px',
+        lg: '12px',
+        xl: '16px',
+        full: '9999px',
+      },
     },
   },
   plugins: [],
