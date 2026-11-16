@@ -1,4 +1,4 @@
-# SnapLocate — Thapar Academic OS
+# TIET-Sync — Thapar Academic OS
 hi
 A restrained, institutional university platform designed exclusively for the **Overview** and **Academic** operations of Thapar Institute of Engineering & Technology (TIET).
 

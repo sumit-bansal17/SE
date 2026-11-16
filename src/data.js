@@ -1,4 +1,4 @@
-// Initial seed and fallback datasets for SnapLocate Academic OS
+// Initial seed and fallback datasets for TIET-Sync Academic OS
 
 export const timeSlots = [
   '8:00-8:50',

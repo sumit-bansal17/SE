@@ -673,5 +673,5 @@ app.post('/api/system/reset', (req, res) => {
 
 // Start listening
 app.listen(PORT, () => {
-  console.log(`[SnapLocate API] Academic Server running on http://localhost:${PORT}`);
+  console.log(`[TIET-Sync API] Academic Server running on http://localhost:${PORT}`);
 });
