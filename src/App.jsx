@@ -346,10 +346,10 @@ function PageLayout({ children }) {
             <Menu size={22} />
           </button>
           <div onClick={() => navigate(user?.role === 'admin' ? '/admin/dashboard' : user?.role === 'professor' ? '/faculty/dashboard' : '/dashboard')} className="flex items-center gap-3 cursor-pointer select-none">
-            <img src="/images/snaplocate-icon.svg" alt="SnapLocate" className="w-8 h-8 rounded-none" />
+            <img src="/images/tiet-sync-icon.svg" alt="TIET-Sync" className="w-8 h-8 rounded-none" />
             <div>
               <div className="text-[17px] font-bold text-primary leading-tight flex items-center gap-2">
-                SnapLocate
+                TIET-Sync
                 <span className="text-[11px] font-normal tracking-wide text-secondary border-l border-neutral pl-2 uppercase">Campus OS</span>
               </div>
             </div>
@@ -439,7 +439,7 @@ function PageLayout({ children }) {
             <div onClick={() => setMobileMenuOpen(false)} className="fixed inset-0 bg-secondary/40" />
             <div className="relative w-[260px] bg-surface h-full shadow-lg p-5 z-10 flex flex-col gap-2">
               <div className="flex justify-between items-center pb-3 border-b border-neutral">
-                <div className="font-bold text-primary text-base">SnapLocate</div>
+                <div className="font-bold text-primary text-base">TIET-Sync</div>
                 <button onClick={() => setMobileMenuOpen(false)} className="p-1 text-secondary bg-transparent border-none cursor-pointer"><X size={18} /></button>
               </div>
               {currentNav.map((item, idx) => {
@@ -478,8 +478,8 @@ function AuthGateway() {
       <div className="w-full max-w-4xl bg-surface border border-neutral p-6 sm:p-10 shadow-sm">
         <div className="text-center pb-6 border-b border-neutral">
           <div className="flex justify-center items-center gap-3 mb-2">
-            <img src="/images/snaplocate-icon.svg" alt="SnapLocate" className="w-10 h-10 rounded-none" />
-            <h1 className="headline-display text-primary tracking-tight">SnapLocate</h1>
+            <img src="/images/tiet-sync-icon.svg" alt="TIET-Sync" className="w-10 h-10 rounded-none" />
+            <h1 className="headline-display text-primary tracking-tight">TIET-Sync</h1>
           </div>
           <p className="body-md text-secondary">Campus OS • Student-Faculty Academic Consultation & Timetable Hub</p>
         </div>

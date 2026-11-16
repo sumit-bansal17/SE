@@ -1,4 +1,4 @@
-// API Client for SnapLocate Academic Backend
+// API Client for TIET-Sync Academic Backend
 // Communicates with Express API at /api, with robust local fallback
 
 const API_BASE = '/api';
