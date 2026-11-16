@@ -346,13 +346,8 @@ function PageLayout({ children }) {
             <Menu size={22} />
           </button>
           <div onClick={() => navigate(user?.role === 'admin' ? '/admin/dashboard' : user?.role === 'professor' ? '/faculty/dashboard' : '/dashboard')} className="flex items-center gap-3 cursor-pointer select-none">
-            <img src="/images/tiet-sync-icon.svg" alt="TIET-Sync" className="w-8 h-8 rounded-none" />
-            <div>
-              <div className="text-[17px] font-bold text-primary leading-tight flex items-center gap-2">
-                TIET-Sync
-                <span className="text-[11px] font-normal tracking-wide text-secondary border-l border-neutral pl-2 uppercase">Campus OS</span>
-              </div>
-            </div>
+            <img src="/images/tiet-sync-location-pin-logo.webp" alt="TIET-Sync" className="w-[116px] h-auto object-contain" />
+            <span className="text-[11px] font-normal tracking-wide text-secondary border-l border-neutral pl-2 uppercase">Campus OS</span>
           </div>
         </div>
 
@@ -478,8 +473,7 @@ function AuthGateway() {
       <div className="w-full max-w-4xl bg-surface border border-neutral p-6 sm:p-10 shadow-sm">
         <div className="text-center pb-6 border-b border-neutral">
           <div className="flex justify-center items-center gap-3 mb-2">
-            <img src="/images/tiet-sync-icon.svg" alt="TIET-Sync" className="w-10 h-10 rounded-none" />
-            <h1 className="headline-display text-primary tracking-tight">TIET-Sync</h1>
+            <img src="/images/tiet-sync-location-pin-logo.webp" alt="TIET-Sync" className="w-[210px] h-auto object-contain" />
           </div>
           <p className="body-md text-secondary">Campus OS • Student-Faculty Academic Consultation & Timetable Hub</p>
         </div>
