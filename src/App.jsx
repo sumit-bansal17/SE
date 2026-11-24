@@ -17,126 +17,115 @@ import {
 } from './data';
 import { api } from './api';
 
+export const matchDay = (tDay, targetDay) => {
+  if (tDay === undefined || tDay === null || !targetDay) return false;
+  if (typeof tDay === 'number') {
+    return daysOfWeek[tDay]?.toLowerCase() === String(targetDay).toLowerCase();
+  }
+  return String(tDay).toLowerCase() === String(targetDay).toLowerCase();
+};
+
 // ==========================================
 // 1. GLOBAL STATE & CONTEXT
 // ==========================================
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
-  // Current user (Student by default for instant preview)
+  // Current user (from localStorage session, default to defaultStudent for preview compatibility)
   const [user, setUser] = useState(() => {
-    const s = localStorage.getItem('snaplocate_academic_user');
+    const s = localStorage.getItem('tiet_sync_academic_user');
     return s ? JSON.parse(s) : defaultStudent;
   });
 
-  // State collections with localStorage persistence
-  const [classrooms, setClassrooms] = useState(() => {
-    const s = localStorage.getItem('snaplocate_classrooms');
-    return s ? JSON.parse(s) : initialClassrooms;
-  });
+  // State collections
+  const [classrooms, setClassrooms] = useState([]);
+  const [professors, setProfessors] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [timetables, setTimetables] = useState([]);
+  const [meetingRequests, setMeetingRequests] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const [links, setLinks] = useState([]);
+  const [files, setFiles] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [professors, setProfessors] = useState(() => {
-    const s = localStorage.getItem('snaplocate_professors');
-    return s ? JSON.parse(s) : initialProfessors;
-  });
+  // Sync with backend API
+  const syncData = async (activeUser = user) => {
+    try {
+      const [cls, profs, studs, depts, logs, reqs] = await Promise.all([
+        api.getClassrooms().catch(() => initialClassrooms),
+        api.getProfessors().catch(() => initialProfessors),
+        api.getStudents().catch(() => initialStudents),
+        api.getDepartments().catch(() => initialDepartments),
+        api.getAuditLogs().catch(() => initialAuditLogs),
+        api.getRequests().catch(() => initialRequests),
+      ]);
+      if (cls) setClassrooms(cls);
+      if (profs) setProfessors(profs);
+      if (studs) setStudents(studs);
+      if (depts) setDepartments(depts);
+      if (logs) setAuditLogs(logs);
+      if (reqs) setMeetingRequests(reqs);
 
-  const [students, setStudents] = useState(() => {
-    const s = localStorage.getItem('snaplocate_students');
-    return s ? JSON.parse(s) : initialStudents;
-  });
-
-  const [timetables, setTimetables] = useState(() => {
-    const s = localStorage.getItem('snaplocate_timetables');
-    return s ? JSON.parse(s) : initialTimetable;
-  });
-
-  const [meetingRequests, setMeetingRequests] = useState(() => {
-    const s = localStorage.getItem('snaplocate_requests');
-    return s ? JSON.parse(s) : initialRequests;
-  });
-
-  const [tasks, setTasks] = useState(() => {
-    const s = localStorage.getItem('snaplocate_tasks');
-    return s ? JSON.parse(s) : initialTasks;
-  });
-
-  const [notes, setNotes] = useState(() => {
-    const s = localStorage.getItem('snaplocate_notes');
-    return s ? JSON.parse(s) : initialNotes;
-  });
-
-  const [links, setLinks] = useState(() => {
-    const s = localStorage.getItem('snaplocate_links');
-    return s ? JSON.parse(s) : initialLinks;
-  });
-
-  const [files, setFiles] = useState(() => {
-    const s = localStorage.getItem('snaplocate_files');
-    return s ? JSON.parse(s) : initialFiles;
-  });
-
-  const [notifications, setNotifications] = useState(() => {
-    const s = localStorage.getItem('snaplocate_notifications');
-    return s ? JSON.parse(s) : initialNotifications;
-  });
-
-  const [departments, setDepartments] = useState(() => {
-    const s = localStorage.getItem('snaplocate_departments');
-    return s ? JSON.parse(s) : initialDepartments;
-  });
-
-  const [auditLogs, setAuditLogs] = useState(() => {
-    const s = localStorage.getItem('snaplocate_audit_logs');
-    return s ? JSON.parse(s) : initialAuditLogs;
-  });
-
-  // Persist to local storage
-  useEffect(() => { localStorage.setItem('snaplocate_academic_user', JSON.stringify(user)); }, [user]);
-  useEffect(() => { localStorage.setItem('snaplocate_classrooms', JSON.stringify(classrooms)); }, [classrooms]);
-  useEffect(() => { localStorage.setItem('snaplocate_professors', JSON.stringify(professors)); }, [professors]);
-  useEffect(() => { localStorage.setItem('snaplocate_students', JSON.stringify(students)); }, [students]);
-  useEffect(() => { localStorage.setItem('snaplocate_timetables', JSON.stringify(timetables)); }, [timetables]);
-  useEffect(() => { localStorage.setItem('snaplocate_requests', JSON.stringify(meetingRequests)); }, [meetingRequests]);
-  useEffect(() => { localStorage.setItem('snaplocate_tasks', JSON.stringify(tasks)); }, [tasks]);
-  useEffect(() => { localStorage.setItem('snaplocate_notes', JSON.stringify(notes)); }, [notes]);
-  useEffect(() => { localStorage.setItem('snaplocate_links', JSON.stringify(links)); }, [links]);
-  useEffect(() => { localStorage.setItem('snaplocate_files', JSON.stringify(files)); }, [files]);
-  useEffect(() => { localStorage.setItem('snaplocate_notifications', JSON.stringify(notifications)); }, [notifications]);
-  useEffect(() => { localStorage.setItem('snaplocate_departments', JSON.stringify(departments)); }, [departments]);
-  useEffect(() => { localStorage.setItem('snaplocate_audit_logs', JSON.stringify(auditLogs)); }, [auditLogs]);
-
-  // Sync with backend API on mount
-  useEffect(() => {
-    async function syncData() {
-      try {
-        const [cls, profs, studs, depts, logs] = await Promise.all([
-          api.getClassrooms().catch(() => null),
-          api.getProfessors().catch(() => null),
-          api.getStudents().catch(() => null),
-          api.getDepartments().catch(() => null),
-          api.getAuditLogs().catch(() => null)
+      const targetId = activeUser?.id;
+      if (targetId) {
+        const [ttRes, wsRes, notifRes] = await Promise.all([
+          api.getTimetable(targetId).catch(() => null),
+          api.getWorkspace(targetId).catch(() => null),
+          api.getNotifications(targetId).catch(() => null),
         ]);
-        if (cls) setClassrooms(cls);
-        if (profs) setProfessors(profs);
-        if (studs) setStudents(studs);
-        if (depts) setDepartments(depts);
-        if (logs) setAuditLogs(logs);
-      } catch (err) {
-        console.log('Using local store fallback:', err);
+        if (ttRes?.entries) setTimetables(ttRes.entries);
+        if (wsRes) {
+          if (wsRes.tasks) setTasks(wsRes.tasks);
+          if (wsRes.notes) setNotes(wsRes.notes);
+          if (wsRes.links) setLinks(wsRes.links);
+          if (wsRes.files) setFiles(wsRes.files);
+        }
+        if (notifRes) setNotifications(notifRes);
       }
+    } catch (err) {
+      console.warn('API sync notice:', err);
+    } finally {
+      setIsLoading(false);
     }
-    syncData();
-  }, []);
-
-  // Helper actions
-  const loginUser = (userData) => {
-    setUser(userData);
-    addAuditLog('USER_LOGIN', userData.name, userData.role, `Logged in to ${userData.role} portal`);
   };
 
-  const logoutUser = () => {
-    if (user) addAuditLog('USER_LOGOUT', user.name, user.role, 'Signed out of session');
+  useEffect(() => {
+    syncData(user);
+  }, [user?.id]);
+
+  // Periodic notification polling every 30 seconds
+  useEffect(() => {
+    if (!user?.id) return;
+    const interval = setInterval(async () => {
+      try {
+        const notifs = await api.getNotifications(user.id);
+        if (notifs) setNotifications(notifs);
+      } catch {
+        // silent catch
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
+  // Helper actions
+  const loginUser = (userData, token) => {
+    setUser(userData);
+    localStorage.setItem('tiet_sync_academic_user', JSON.stringify(userData));
+    syncData(userData);
+  };
+
+  const logoutUser = async () => {
+    try {
+      await api.logout();
+    } catch (err) {
+      console.warn('Logout error:', err);
+    }
     setUser(null);
+    localStorage.removeItem('tiet_sync_academic_user');
   };
 
   const addAuditLog = (action, actorName, actorRole, details) => {
@@ -185,7 +174,7 @@ export function AppProvider({ children }) {
 
     // 2. Professor has a scheduled class in timetable
     const profClass = timetables.find(
-      (t) => t.ownerId === professorId && t.day.toLowerCase() === day.toLowerCase() && t.timeSlot === timeSlot
+      (t) => t.ownerId === professorId && matchDay(t.day, day) && t.timeSlot === timeSlot
     );
     if (profClass) {
       return {
@@ -207,7 +196,7 @@ export function AppProvider({ children }) {
       }
 
       const studentClass = timetables.find(
-        (t) => t.ownerId === studentId && t.day.toLowerCase() === day.toLowerCase() && t.timeSlot === timeSlot
+        (t) => t.ownerId === studentId && matchDay(t.day, day) && t.timeSlot === timeSlot
       );
       if (studentClass) {
         return {
@@ -289,12 +278,24 @@ function PageLayout({ children }) {
   const userNotifs = notifications.filter((n) => !user || n.userId === user.id);
   const unreadCount = userNotifs.filter((n) => !n.is_read).length;
 
-  const markNotificationRead = (id) => {
-    setNotifications((p) => p.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+  const markNotificationRead = async (id) => {
+    setNotifications((p) => p.map((n) => (n.id === id ? { ...n, is_read: true, isRead: true } : n)));
+    try {
+      await api.markNotificationRead(id);
+    } catch {
+      // ignore
+    }
   };
 
-  const markAllNotificationsRead = () => {
-    setNotifications((p) => p.map((n) => (!user || n.userId === user.id ? { ...n, is_read: true } : n)));
+  const markAllNotificationsRead = async () => {
+    setNotifications((p) => p.map((n) => (!user || n.userId === user.id ? { ...n, is_read: true, isRead: true } : n)));
+    if (user?.id) {
+      try {
+        await api.markAllNotificationsRead(user.id);
+      } catch {
+        // ignore
+      }
+    }
   };
 
   // Role based Navbars
@@ -346,8 +347,11 @@ function PageLayout({ children }) {
             <Menu size={22} />
           </button>
           <div onClick={() => navigate(user?.role === 'admin' ? '/admin/dashboard' : user?.role === 'professor' ? '/faculty/dashboard' : '/dashboard')} className="flex items-center gap-3 cursor-pointer select-none">
-            <img src="/images/tiet-sync-location-pin-logo.webp" alt="TIET-Sync" className="w-[116px] h-auto object-contain" />
-            <span className="text-[11px] font-normal tracking-wide text-secondary border-l border-neutral pl-2 uppercase">Campus OS</span>
+            <img src="/images/tiet-sync-location-pin-logo.webp" alt="TIET-Sync" className="w-[36px] h-[36px] object-contain" />
+            <div className="flex flex-col justify-center">
+              <span className="font-bold text-primary text-base tracking-tight leading-none">TIET-Sync</span>
+              <span className="text-[9px] font-bold text-secondary tracking-widest uppercase mt-1 leading-none">CAMPUS OS</span>
+            </div>
           </div>
         </div>
 
@@ -473,9 +477,13 @@ function AuthGateway() {
       <div className="w-full max-w-4xl bg-surface border border-neutral p-6 sm:p-10 shadow-sm">
         <div className="text-center pb-6 border-b border-neutral">
           <div className="flex justify-center items-center gap-3 mb-2">
-            <img src="/images/tiet-sync-location-pin-logo.webp" alt="TIET-Sync" className="w-[210px] h-auto object-contain" />
+            <img src="/images/tiet-sync-location-pin-logo.webp" alt="TIET-Sync" className="w-[48px] h-[48px] object-contain" />
+            <div className="flex flex-col text-left">
+              <span className="font-extrabold text-primary text-3xl tracking-tight leading-none">TIET-Sync</span>
+              <span className="text-[11px] font-bold text-secondary tracking-widest uppercase mt-1 leading-none">CAMPUS OS</span>
+            </div>
           </div>
-          <p className="body-md text-secondary">Campus OS • Student-Faculty Academic Consultation & Timetable Hub</p>
+          <p className="body-md text-secondary mt-1">Student-Faculty Academic Consultation & Timetable Hub</p>
         </div>
 
         {/* 3 Portal Gateway Cards */}
@@ -546,17 +554,44 @@ function AuthGateway() {
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => { loginUser(defaultStudent); navigate('/dashboard'); }}
+              onClick={async () => {
+                try {
+                  const res = await api.login('student@demo.com', 'demo123');
+                  loginUser(res.user, res.token);
+                  navigate('/dashboard');
+                } catch (e) {
+                  loginUser(defaultStudent);
+                  navigate('/dashboard');
+                }
+              }}
               className="btn-secondary text-xs h-[32px] px-3 border border-neutral bg-surface">
               Demo Student (Sumit)
             </button>
             <button
-              onClick={() => { loginUser(defaultProfessor); navigate('/faculty/dashboard'); }}
+              onClick={async () => {
+                try {
+                  const res = await api.login('professor@demo.com', 'demo123');
+                  loginUser(res.user, res.token);
+                  navigate('/faculty/dashboard');
+                } catch (e) {
+                  loginUser(defaultProfessor);
+                  navigate('/faculty/dashboard');
+                }
+              }}
               className="btn-secondary text-xs h-[32px] px-3 border border-neutral bg-surface">
               Demo Prof (Dr. Rajesh)
             </button>
             <button
-              onClick={() => { loginUser(defaultAdmin); navigate('/admin/dashboard'); }}
+              onClick={async () => {
+                try {
+                  const res = await api.login('admin@demo.com', 'demo123');
+                  loginUser(res.user, res.token);
+                  navigate('/admin/dashboard');
+                } catch (e) {
+                  loginUser(defaultAdmin);
+                  navigate('/admin/dashboard');
+                }
+              }}
               className="btn-secondary text-xs h-[32px] px-3 border border-neutral bg-surface">
               Demo Admin
             </button>
@@ -574,19 +609,25 @@ function StudentLogin() {
   const [email, setEmail] = useState('student@demo.com');
   const [password, setPassword] = useState('demo123');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
       setError('Please provide student email and password');
       return;
     }
-    loginUser({
-      ...defaultStudent,
-      email,
-      name: email.includes('student') ? 'Sumit Bansal' : email.split('@')[0]
-    });
-    navigate('/dashboard');
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.login(email, password);
+      loginUser(data.user, data.token);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -621,8 +662,8 @@ function StudentLogin() {
               required
             />
           </div>
-          <button type="submit" className="btn-primary w-full justify-center mt-2">
-            Sign In as Student
+          <button type="submit" disabled={loading} className="btn-primary w-full justify-center mt-2">
+            {loading ? 'Authenticating...' : 'Sign In as Student'}
           </button>
         </form>
 
@@ -638,7 +679,7 @@ function StudentLogin() {
 // Student Signup Page
 function StudentSignup() {
   const navigate = useNavigate();
-  const { loginUser, setStudents } = useApp();
+  const { loginUser } = useApp();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -647,24 +688,32 @@ function StudentSignup() {
     year: '3rd Year (Batch 2023-2027)',
     password: ''
   });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newStudent = {
-      id: `usr_s_${Date.now()}`,
-      name: formData.name,
-      email: formData.email,
-      role: 'student',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      profile: {
-        rollNo: formData.rollNo,
-        branch: formData.branch,
-        year: formData.year
-      }
-    };
-    setStudents((p) => [newStudent, ...p]);
-    loginUser(newStudent);
-    navigate('/dashboard');
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: 'STUDENT',
+        profile: {
+          rollNo: formData.rollNo,
+          branch: formData.branch,
+          year: formData.year,
+        }
+      });
+      loginUser(data.user, data.token);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message || 'Registration failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -675,6 +724,8 @@ function StudentSignup() {
           <h2 className="headline-sm text-primary mt-2">Create Student Account</h2>
           <p className="body-sm text-secondary mt-1">Enroll your profile into Thapar Academic OS</p>
         </div>
+
+        {error && <div className="p-3 mb-4 bg-red-50 text-red-700 text-xs border border-red-200">{error}</div>}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
@@ -746,8 +797,8 @@ function StudentSignup() {
               required
             />
           </div>
-          <button type="submit" className="btn-primary w-full justify-center mt-3">
-            Register & Sign In
+          <button type="submit" disabled={loading} className="btn-primary w-full justify-center mt-3">
+            {loading ? 'Creating Account...' : 'Register & Sign In'}
           </button>
         </form>
 
@@ -766,15 +817,22 @@ function ProfessorLogin() {
   const { loginUser } = useApp();
   const [email, setEmail] = useState('professor@demo.com');
   const [password, setPassword] = useState('demo123');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    loginUser({
-      ...defaultProfessor,
-      email,
-      name: email.includes('professor') ? 'Dr. Rajesh Kumar' : 'Faculty Member'
-    });
-    navigate('/faculty/dashboard');
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.login(email, password);
+      loginUser(data.user, data.token);
+      navigate('/faculty/dashboard');
+    } catch (err) {
+      setError(err.message || 'Login failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -785,6 +843,8 @@ function ProfessorLogin() {
           <h2 className="headline-sm text-primary mt-2">Sign in as Professor</h2>
           <p className="body-sm text-secondary mt-1">Review student consultation requests & timetable</p>
         </div>
+
+        {error && <div className="p-3 mb-4 bg-red-50 text-red-700 text-xs border border-red-200">{error}</div>}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
@@ -807,8 +867,8 @@ function ProfessorLogin() {
               required
             />
           </div>
-          <button type="submit" className="btn-primary w-full justify-center mt-2">
-            Sign In to Faculty Desk
+          <button type="submit" disabled={loading} className="btn-primary w-full justify-center mt-2">
+            {loading ? 'Authenticating...' : 'Sign In to Faculty Desk'}
           </button>
         </form>
 
@@ -824,7 +884,7 @@ function ProfessorLogin() {
 // Professor Signup Page
 function ProfessorSignup() {
   const navigate = useNavigate();
-  const { loginUser, setProfessors } = useApp();
+  const { loginUser } = useApp();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -834,28 +894,33 @@ function ProfessorSignup() {
     officeLocation: '',
     password: ''
   });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newProf = {
-      id: `usr_p_${Date.now()}`,
-      name: formData.name,
-      email: formData.email,
-      role: 'professor',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      profile: {
-        teacherCode: formData.teacherCode || `TCH-${Date.now().toString().slice(-4)}`,
-        department: formData.department,
-        designation: formData.designation,
-        officeLocation: formData.officeLocation || 'Block C, Faculty Wing',
-        officeHours: 'Mon & Wed: 03:00 PM - 05:00 PM',
-        bio: 'Faculty member & researcher.',
-        isOnline: true
-      }
-    };
-    setProfessors((p) => [newProf, ...p]);
-    loginUser(newProf);
-    navigate('/faculty/dashboard');
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: 'PROFESSOR',
+        profile: {
+          teacherCode: formData.teacherCode || `TCH-${Date.now().toString().slice(-4)}`,
+          department: formData.department,
+          designation: formData.designation,
+          officeLocation: formData.officeLocation || 'Faculty Wing',
+        }
+      });
+      loginUser(data.user, data.token);
+      navigate('/faculty/dashboard');
+    } catch (err) {
+      setError(err.message || 'Registration failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -866,6 +931,8 @@ function ProfessorSignup() {
           <h2 className="headline-sm text-primary mt-2">Register Faculty Profile</h2>
           <p className="body-sm text-secondary mt-1">Publish your academic directory listing</p>
         </div>
+
+        {error && <div className="p-3 mb-4 bg-red-50 text-red-700 text-xs border border-red-200">{error}</div>}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
@@ -950,8 +1017,8 @@ function ProfessorSignup() {
               required
             />
           </div>
-          <button type="submit" className="btn-primary w-full justify-center mt-3">
-            Register Faculty Account
+          <button type="submit" disabled={loading} className="btn-primary w-full justify-center mt-3">
+            {loading ? 'Registering...' : 'Register Faculty Account'}
           </button>
         </form>
 
@@ -970,11 +1037,22 @@ function AdminLogin() {
   const { loginUser } = useApp();
   const [email, setEmail] = useState('admin@demo.com');
   const [password, setPassword] = useState('demo123');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    loginUser(defaultAdmin);
-    navigate('/admin/dashboard');
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.login(email, password);
+      loginUser(data.user, data.token);
+      navigate('/admin/dashboard');
+    } catch (err) {
+      setError(err.message || 'Admin authentication failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -985,6 +1063,8 @@ function AdminLogin() {
           <h2 className="headline-sm text-primary mt-2">Academic Administration</h2>
           <p className="body-sm text-secondary mt-1">Dean Office System Control</p>
         </div>
+
+        {error && <div className="p-3 mb-4 bg-red-50 text-red-700 text-xs border border-red-200">{error}</div>}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
@@ -1007,8 +1087,8 @@ function AdminLogin() {
               required
             />
           </div>
-          <button type="submit" className="btn-primary w-full justify-center mt-2">
-            Authenticate as Admin
+          <button type="submit" disabled={loading} className="btn-primary w-full justify-center mt-2">
+            {loading ? 'Authenticating...' : 'Authenticate as Admin'}
           </button>
         </form>
 
@@ -1046,7 +1126,7 @@ function StudentDashboard() {
   // Student classes today
   const myClassesToday = useMemo(() => {
     return timetables
-      .filter((t) => t.ownerId === (user?.id || 'usr_student_demo') && t.day.toLowerCase() === currentDayName.toLowerCase())
+      .filter((t) => t.ownerId === (user?.id || 'usr_student_demo') && matchDay(t.day, currentDayName))
       .sort((a, b) => a.periodIndex - b.periodIndex);
   }, [timetables, user, currentDayName]);
 
@@ -1054,8 +1134,13 @@ function StudentDashboard() {
   const nextClass = myClassesToday.length > 0 ? myClassesToday[0] : null;
 
   // Toggle task
-  const toggleTask = (id) => {
-    setTasks((p) => p.map((t) => (t.id === id ? { ...t, is_done: !t.is_done } : t)));
+  const toggleTask = async (id, currentDone) => {
+    try {
+      await api.updateTask(id, { done: !currentDone });
+      setTasks((p) => p.map((t) => (t.id === id ? { ...t, is_done: !t.is_done, done: !t.is_done } : t)));
+    } catch (err) {
+      console.error('Toggle task failed:', err);
+    }
   };
 
   const studentTasks = tasks.filter((t) => !t.ownerId || t.ownerId === user?.id);
@@ -1147,7 +1232,7 @@ function StudentDashboard() {
               <div className="flex flex-col gap-2.5 max-h-56 overflow-y-auto">
                 {pendingTasks.slice(0, 4).map((tsk) => (
                   <div key={tsk.id} className="flex items-start gap-2.5 p-2 bg-muted/40 border border-neutral hover:border-neutral/80 transition-colors">
-                    <button onClick={() => toggleTask(tsk.id)} className="mt-0.5 text-secondary hover:text-primary bg-transparent border-none p-0 cursor-pointer">
+                    <button onClick={() => toggleTask(tsk.id, tsk.is_done)} className="mt-0.5 text-secondary hover:text-primary bg-transparent border-none p-0 cursor-pointer">
                       {tsk.is_done ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} />}
                     </button>
                     <div className="flex-1 min-w-0">
@@ -1229,7 +1314,7 @@ function StudentDashboard() {
                 </thead>
                 <tbody className="divide-y divide-neutral">
                   {daysOfWeek.slice(0, 5).map((d) => {
-                    const dayClasses = timetables.filter((t) => t.ownerId === (user?.id || 'usr_student_demo') && t.day.toLowerCase() === d.toLowerCase());
+                    const dayClasses = timetables.filter((t) => t.ownerId === (user?.id || 'usr_student_demo') && matchDay(t.day, d));
                     return (
                       <tr key={d} className="hover:bg-muted/20">
                         <td className="p-2 font-medium text-secondary whitespace-nowrap">{d}</td>
@@ -1240,7 +1325,7 @@ function StudentDashboard() {
                             <div className="flex flex-wrap gap-1.5">
                               {dayClasses.map((dc) => (
                                 <span key={dc.id} className="px-2 py-0.5 bg-neutral text-[10px] text-secondary">
-                                  {dc.timeSlot}: {dc.subject.split(':')[0]}
+                                  {dc.timeSlot}: {dc.subject ? dc.subject.split(':')[0] : 'Class'}
                                 </span>
                               ))}
                             </div>
@@ -1524,7 +1609,7 @@ function WorkspacePage() {
   const [cellColor, setCellColor] = useState('#640000');
 
   const openCellModal = (day, periodIndex) => {
-    const existing = myTimetable.find((t) => t.day.toLowerCase() === day.toLowerCase() && t.periodIndex === periodIndex);
+    const existing = myTimetable.find((t) => matchDay(t.day, day) && t.periodIndex === periodIndex);
     setEditingCell({ day, periodIndex, existing });
     if (existing) {
       setCellSubject(existing.subject || '');
@@ -1539,45 +1624,47 @@ function WorkspacePage() {
     }
   };
 
-  const handleSaveCell = (e) => {
+  const handleSaveCell = async (e) => {
     e.preventDefault();
     if (!editingCell) return;
     const { day, periodIndex, existing } = editingCell;
 
-    if (existing) {
-      setTimetables((p) => p.map((t) => t.id === existing.id ? {
-        ...t,
-        subject: cellSubject,
-        roomName: cellRoom,
-        professorName: cellProf,
-        color: cellColor
-      } : t));
-    } else {
-      const newEntry = {
-        id: `tt-${Date.now()}`,
+    try {
+      const saved = await api.saveTimetableEntry({
+        id: existing?.id,
         ownerId,
         day,
         periodIndex,
-        timeSlot: timeSlots[periodIndex],
         subject: cellSubject || 'Class Block',
         roomName: cellRoom,
         professorName: cellProf,
         color: cellColor
-      };
-      setTimetables((p) => [...p, newEntry]);
+      });
+      if (existing) {
+        setTimetables((p) => p.map((t) => (t.id === existing.id ? saved : t)));
+      } else {
+        setTimetables((p) => [...p.filter((t) => !(t.ownerId === ownerId && matchDay(t.day, day) && t.periodIndex === periodIndex)), saved]);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to save timetable cell');
     }
     setEditingCell(null);
   };
 
-  const handleDeleteCell = () => {
+  const handleDeleteCell = async () => {
     if (editingCell?.existing) {
-      setTimetables((p) => p.filter((t) => t.id !== editingCell.existing.id));
+      try {
+        await api.deleteTimetableEntry(editingCell.existing.id);
+        setTimetables((p) => p.filter((t) => t.id !== editingCell.existing.id));
+      } catch (err) {
+        alert(err.message || 'Failed to delete timetable entry');
+      }
     }
     setEditingCell(null);
   };
 
   // Import timetable handler
-  const handleImportTimetable = () => {
+  const handleImportTimetable = async () => {
     if (!importCsvText.trim()) return;
     const lines = importCsvText.trim().split('\n');
     const newEntries = [];
@@ -1587,8 +1674,6 @@ function WorkspacePage() {
         const [day, slotIndexStr, subject, roomName, professorName] = parts;
         const pIdx = parseInt(slotIndexStr) || 0;
         newEntries.push({
-          id: `tt-imp-${Date.now()}_${Math.random()}`,
-          ownerId,
           day: day || 'Monday',
           periodIndex: pIdx,
           timeSlot: timeSlots[pIdx] || '8:50-9:40',
@@ -1601,30 +1686,29 @@ function WorkspacePage() {
     });
 
     if (newEntries.length > 0) {
-      setTimetables((p) => [...p.filter((t) => t.ownerId !== ownerId), ...newEntries]);
-      alert(`Successfully imported ${newEntries.length} timetable periods!`);
+      try {
+        const saved = await api.bulkSaveTimetable(ownerId, newEntries);
+        setTimetables((p) => [...p.filter((t) => t.ownerId !== ownerId), ...(Array.isArray(saved) ? saved : newEntries)]);
+        alert(`Successfully imported ${newEntries.length} timetable periods!`);
+      } catch (err) {
+        alert(err.message || 'Failed to import timetable');
+      }
     }
     setIsImportModalOpen(false);
     setImportCsvText('');
   };
 
   // Upload file with 20MB quota check
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const fileSizeMB = Math.round((file.size / (1024 * 1024)) * 100) / 100;
-    if (quota.usedMB + fileSizeMB > quota.maxMB) {
-      alert(`Upload blocked: Storage quota exceeded! You have ${quota.usedMB} MB used of 20 MB max.`);
-      return;
+    try {
+      const uploaded = await api.uploadFile(ownerId, file);
+      setFiles((p) => [uploaded, ...p.filter((f) => f.id !== uploaded.id)]);
+      alert('File uploaded successfully!');
+    } catch (err) {
+      alert(err.message || 'Upload failed');
     }
-    const newFile = {
-      id: `file-${Date.now()}`,
-      ownerId,
-      name: file.name,
-      size: fileSizeMB,
-      url: '#'
-    };
-    setFiles((p) => [newFile, ...p]);
   };
 
   return (
@@ -1680,7 +1764,7 @@ function WorkspacePage() {
                 </td>
                 {daysOfWeek.map((day) => {
                   const isWeekend = day === 'Saturday' || day === 'Sunday';
-                  const entry = myTimetable.find((t) => t.day.toLowerCase() === day.toLowerCase() && t.periodIndex === periodIdx);
+                  const entry = myTimetable.find((t) => matchDay(t.day, day) && t.periodIndex === periodIdx);
 
                   return (
                     <td
@@ -1756,7 +1840,14 @@ function WorkspacePage() {
                 myTasks.map((t) => (
                   <div key={t.id} className="flex items-start gap-2 p-1.5 border border-neutral bg-muted/20 text-xs">
                     <button
-                      onClick={() => setTasks((p) => p.map((x) => x.id === t.id ? { ...x, is_done: !x.is_done } : x))}
+                      onClick={async () => {
+                        try {
+                          await api.updateTask(t.id, { done: !t.is_done });
+                          setTasks((p) => p.map((x) => (x.id === t.id ? { ...x, is_done: !x.is_done, done: !x.is_done } : x)));
+                        } catch (err) {
+                          console.error('Toggle task failed:', err);
+                        }
+                      }}
                       className="bg-transparent border-none p-0 cursor-pointer text-secondary">
                       {t.is_done ? <CheckSquare size={14} className="text-primary" /> : <Square size={14} />}
                     </button>
@@ -1782,15 +1873,27 @@ function WorkspacePage() {
             </div>
             <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
               {myLinks.map((l) => (
-                <a
+                <div
                   key={l.id}
-                  href={l.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="p-2 border border-neutral bg-muted/20 hover:border-primary transition-colors flex items-center justify-between text-xs text-secondary no-underline">
-                  <span className="truncate">{l.title}</span>
-                  <ExternalLink size={12} className="text-primary shrink-0" />
-                </a>
+                  className="p-2 border border-neutral bg-muted/20 hover:border-primary transition-colors flex items-center justify-between text-xs text-secondary">
+                  <a href={l.url} target="_blank" rel="noreferrer" className="truncate text-secondary no-underline flex items-center gap-1.5 flex-1">
+                    <span className="truncate">{l.title}</span>
+                    <ExternalLink size={12} className="text-primary shrink-0" />
+                  </a>
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await api.deleteLink(l.id);
+                        setLinks((p) => p.filter((x) => x.id !== l.id));
+                      } catch (err) {
+                        console.error('Delete link failed:', err);
+                      }
+                    }}
+                    className="p-1 text-secondary/60 hover:text-red-700 bg-transparent border-none cursor-pointer ml-1">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -1831,7 +1934,14 @@ function WorkspacePage() {
                     <div className="text-[10px] text-secondary/60">{f.size} MB</div>
                   </div>
                   <button
-                    onClick={() => setFiles((p) => p.filter((x) => x.id !== f.id))}
+                    onClick={async () => {
+                      try {
+                        await api.deleteFile(f.id);
+                        setFiles((p) => p.filter((x) => x.id !== f.id));
+                      } catch (err) {
+                        alert(err.message || 'Failed to delete file');
+                      }
+                    }}
                     className="p-1 text-secondary/60 hover:text-red-700 bg-transparent border-none cursor-pointer">
                     <Trash2 size={13} />
                   </button>
@@ -1993,7 +2103,15 @@ function WorkspacePage() {
             <div className="flex justify-between pt-2">
               {activeNoteModal.id && (
                 <button
-                  onClick={() => { setNotes((p) => p.filter((x) => x.id !== activeNoteModal.id)); setActiveNoteModal(null); }}
+                  onClick={async () => {
+                    try {
+                      await api.deleteNote(activeNoteModal.id);
+                      setNotes((p) => p.filter((x) => x.id !== activeNoteModal.id));
+                    } catch (err) {
+                      console.error('Delete note failed:', err);
+                    }
+                    setActiveNoteModal(null);
+                  }}
                   className="btn-secondary text-xs text-red-700">
                   Delete
                 </button>
@@ -2001,11 +2119,23 @@ function WorkspacePage() {
               <div className="flex gap-2 ml-auto">
                 <button onClick={() => setActiveNoteModal(null)} className="btn-secondary text-xs">Cancel</button>
                 <button
-                  onClick={() => {
-                    if (activeNoteModal.id) {
-                      setNotes((p) => p.map((x) => x.id === activeNoteModal.id ? activeNoteModal : x));
-                    } else {
-                      setNotes((p) => [{ id: `note-${Date.now()}`, ownerId, ...activeNoteModal }, ...p]);
+                  onClick={async () => {
+                    try {
+                      if (activeNoteModal.id) {
+                        const updated = await api.updateNote(activeNoteModal.id, {
+                          title: activeNoteModal.title,
+                          content: activeNoteModal.content,
+                        });
+                        setNotes((p) => p.map((x) => (x.id === activeNoteModal.id ? updated : x)));
+                      } else {
+                        const created = await api.createNote(ownerId, {
+                          title: activeNoteModal.title,
+                          content: activeNoteModal.content,
+                        });
+                        setNotes((p) => [created, ...p]);
+                      }
+                    } catch (err) {
+                      console.error('Save note failed:', err);
                     }
                     setActiveNoteModal(null);
                   }}
@@ -2039,11 +2169,19 @@ function WorkspacePage() {
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setActiveTaskModal(false)} className="btn-secondary text-xs">Cancel</button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   const label = document.getElementById('new-task-label').value;
                   const sub = document.getElementById('new-task-sub').value;
                   if (label) {
-                    setTasks((p) => [{ id: `tsk-${Date.now()}`, ownerId, label, sub: sub || 'Coursework', is_done: false }, ...p]);
+                    try {
+                      const created = await api.createTask(ownerId, {
+                        title: label,
+                        dueDate: sub || 'Coursework',
+                      });
+                      setTasks((p) => [created, ...p]);
+                    } catch (err) {
+                      console.error('Create task failed:', err);
+                    }
                     setActiveTaskModal(false);
                   }
                 }}
@@ -2066,12 +2204,17 @@ function WorkspacePage() {
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setActiveLinkModal(false)} className="btn-secondary text-xs">Cancel</button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   const title = document.getElementById('link-title').value;
                   let url = document.getElementById('link-url').value;
                   if (title && url) {
                     if (!url.startsWith('http')) url = `https://${url}`;
-                    setLinks((p) => [{ id: `link-${Date.now()}`, ownerId, title, url }, ...p]);
+                    try {
+                      const created = await api.createLink(ownerId, { title, url });
+                      setLinks((p) => [created, ...p]);
+                    } catch (err) {
+                      console.error('Create link failed:', err);
+                    }
                     setActiveLinkModal(false);
                   }
                 }}
@@ -2232,7 +2375,7 @@ function ProfessorsDirectory() {
     setAttachedFile(null);
   };
 
-  const handleSubmitMeetingRequest = (e) => {
+  const handleSubmitMeetingRequest = async (e) => {
     e.preventDefault();
     if (!reqReason.trim()) {
       alert('Please provide a reason for the consultation.');
@@ -2245,40 +2388,25 @@ function ProfessorsDirectory() {
       }
     }
 
-    const newRequest = {
-      id: `req-${Date.now()}`,
-      studentId: user?.id || 'usr_student_demo',
-      studentName: user?.name || 'Sumit Bansal',
-      studentRoll: user?.profile?.rollNo || '102303492',
-      studentBranch: user?.profile?.branch || 'Computer Science',
-      professorId: bookingProf.id,
-      professorName: bookingProf.name,
-      date: reqDate,
-      timeSlot: reqSlot,
-      reason: reqReason,
-      type: reqType,
-      attachmentUrl: attachedFile ? URL.createObjectURL(attachedFile) : null,
-      attachmentName: attachedFile ? attachedFile.name : null,
-      attachmentSize: attachedFile ? Math.round((attachedFile.size / (1024 * 1024)) * 100) / 100 : 0,
-      status: 'pending',
-      professorRemark: null,
-      createdAt: new Date().toISOString()
-    };
+    try {
+      const fd = new FormData();
+      fd.append('studentId', user?.id || '');
+      fd.append('professorId', bookingProf.id);
+      fd.append('date', reqDate);
+      fd.append('timeSlot', reqSlot);
+      fd.append('reason', reqReason);
+      fd.append('type', reqType);
+      if (attachedFile) {
+        fd.append('attachment', attachedFile);
+      }
 
-    setMeetingRequests((p) => [newRequest, ...p]);
-
-    // Send notifications
-    addNotification(
-      bookingProf.id,
-      'New Meeting Request',
-      `${user?.name || 'Student'} requested a consultation on ${reqDate} (${reqSlot}) regarding "${reqReason.slice(0, 40)}...".`,
-      '/requests'
-    );
-
-    addAuditLog('REQUEST_SUBMITTED', user?.name, 'student', `Submitted consultation request with ${bookingProf.name} for ${reqDate} (${reqSlot})`);
-
-    alert('Meeting request submitted successfully! Professor will review your request.');
-    setBookingProf(null);
+      const created = await api.createRequest(fd);
+      setMeetingRequests((p) => [created, ...p.filter((r) => r.id !== created.id)]);
+      alert('Meeting request submitted successfully! Professor will review your request.');
+      setBookingProf(null);
+    } catch (err) {
+      alert(err.message || 'Failed to submit meeting request');
+    }
   };
 
   return (
@@ -2436,7 +2564,7 @@ function ProfessorsDirectory() {
                   </thead>
                   <tbody className="divide-y divide-neutral">
                     {daysOfWeek.slice(0, 5).map((d) => {
-                      const profSlots = timetables.filter((t) => t.ownerId === selectedProfile.id && t.day.toLowerCase() === d.toLowerCase());
+                      const profSlots = timetables.filter((t) => t.ownerId === selectedProfile.id && matchDay(t.day, d));
                       return (
                         <tr key={d}>
                           <td className="p-2 font-medium text-secondary whitespace-nowrap bg-muted/20 w-24">{d}</td>
@@ -2616,38 +2744,57 @@ function RequestsPage() {
   const pendingCount = meetingRequests.filter((r) => (isProfessor ? r.professorId === user?.id : r.studentId === user?.id) && r.status === 'pending').length;
 
   // Actions
-  const handleAccept = (req) => {
-    setMeetingRequests((p) => p.map((r) => r.id === req.id ? { ...r, status: 'accepted', professorRemark: 'Accepted by professor.' } : r));
-    addNotification(req.studentId, 'Meeting Confirmed', `${req.professorName} accepted your consultation request for ${req.date} at ${req.timeSlot}.`, '/requests');
-    addAuditLog('REQUEST_ACCEPTED', req.professorName, 'professor', `Approved request #${req.id} from student ${req.studentName}`);
+  const handleAccept = async (req) => {
+    try {
+      const updated = await api.acceptRequest(req.id, 'Accepted by professor.');
+      setMeetingRequests((p) => p.map((r) => (r.id === req.id ? updated : r)));
+    } catch (err) {
+      alert(err.message || 'Failed to accept meeting request');
+    }
   };
 
-  const handleConfirmReject = () => {
+  const handleConfirmReject = async () => {
     if (!rejectingReq) return;
-    setMeetingRequests((p) => p.map((r) => r.id === rejectingReq.id ? { ...r, status: 'rejected', professorRemark: rejectRemark || 'Declined by professor' } : r));
-    addNotification(rejectingReq.studentId, 'Meeting Declined', `${rejectingReq.professorName} declined your meeting request. Reason: ${rejectRemark || 'Not available'}`, '/requests');
-    addAuditLog('REQUEST_REJECTED', rejectingReq.professorName, 'professor', `Declined request #${rejectingReq.id} with remark: ${rejectRemark}`);
-    setRejectingReq(null);
-    setRejectRemark('');
+    try {
+      const updated = await api.rejectRequest(rejectingReq.id, rejectRemark || 'Declined by professor');
+      setMeetingRequests((p) => p.map((r) => (r.id === rejectingReq.id ? updated : r)));
+      setRejectingReq(null);
+      setRejectRemark('');
+    } catch (err) {
+      alert(err.message || 'Failed to reject request');
+    }
   };
 
-  const handleConfirmReschedule = () => {
+  const handleConfirmReschedule = async () => {
     if (!reschedulingReq) return;
-    setMeetingRequests((p) => p.map((r) => r.id === reschedulingReq.id ? {
-      ...r,
-      status: 'pending',
-      date: newReschedDate,
-      timeSlot: newReschedSlot,
-      professorRemark: `Proposed new time: ${newReschedDate} at ${newReschedSlot}`
-    } : r));
-    addNotification(reschedulingReq.studentId, 'Time Rescheduled', `${reschedulingReq.professorName} proposed an alternate time on ${newReschedDate} (${newReschedSlot}).`, '/requests');
-    setReschedulingReq(null);
+    try {
+      let updated;
+      if (isProfessor) {
+        updated = await api.suggestRequestTime(reschedulingReq.id, {
+          proposedDate: newReschedDate,
+          proposedSlot: newReschedSlot,
+        });
+      } else {
+        updated = await api.updateRequest(reschedulingReq.id, {
+          date: newReschedDate,
+          timeSlot: newReschedSlot,
+        });
+      }
+      setMeetingRequests((p) => p.map((r) => (r.id === reschedulingReq.id ? updated : r)));
+      setReschedulingReq(null);
+    } catch (err) {
+      alert(err.message || 'Failed to reschedule request');
+    }
   };
 
-  const handleCancelRequest = (req) => {
+  const handleCancelRequest = async (req) => {
     if (confirm('Are you sure you want to cancel this consultation request?')) {
-      setMeetingRequests((p) => p.map((r) => r.id === req.id ? { ...r, status: 'cancelled' } : r));
-      addAuditLog('REQUEST_CANCELLED', user?.name, user?.role, `Cancelled request #${req.id}`);
+      try {
+        const updated = await api.cancelRequest(req.id);
+        setMeetingRequests((p) => p.map((r) => (r.id === req.id ? (updated?.id ? updated : { ...r, status: 'cancelled' }) : r)));
+      } catch (err) {
+        alert(err.message || 'Failed to cancel request');
+      }
     }
   };
 
@@ -2846,7 +2993,7 @@ function FacultyDashboard() {
   const currentDayName = daysOfWeek[currentTime.getDay() === 0 ? 6 : currentTime.getDay() - 1];
 
   const profClassesToday = timetables
-    .filter((t) => t.ownerId === (user?.id || 'usr_prof_demo') && t.day.toLowerCase() === currentDayName.toLowerCase())
+    .filter((t) => t.ownerId === (user?.id || 'usr_prof_demo') && matchDay(t.day, currentDayName))
     .sort((a, b) => a.periodIndex - b.periodIndex);
 
   const pendingRequests = meetingRequests.filter((r) => r.professorId === (user?.id || 'usr_prof_demo') && r.status === 'pending');
@@ -3070,7 +3217,7 @@ function AdminDashboard() {
 
 // Admin: Manage Students
 function AdminStudentsPage() {
-  const { students, setStudents, addAuditLog } = useApp();
+  const { students, setStudents } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
@@ -3084,51 +3231,53 @@ function AdminStudentsPage() {
     year: '3rd Year'
   });
 
-  const filtered = students.filter((s) => s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.profile?.rollNo?.includes(searchTerm));
+  const filtered = students.filter((s) => s.name?.toLowerCase().includes(searchTerm.toLowerCase()) || s.profile?.rollNo?.includes(searchTerm));
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
-    const created = {
-      id: `usr_s_${Date.now()}`,
-      name: newStudent.name,
-      email: newStudent.email,
-      role: 'student',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      profile: { rollNo: newStudent.rollNo, branch: newStudent.branch, year: newStudent.year }
-    };
-    setStudents((p) => [created, ...p]);
-    addAuditLog('STUDENT_ADDED', 'Admin', 'admin', `Created student ${created.name} (${created.profile.rollNo})`);
-    setIsAddModalOpen(false);
-  };
-
-  const handleDelete = (id) => {
-    if (confirm('Are you sure you want to delete this student record?')) {
-      setStudents((p) => p.filter((s) => s.id !== id));
-      addAuditLog('STUDENT_DELETED', 'Admin', 'admin', `Deleted student record #${id}`);
+    try {
+      const created = await api.createStudent({
+        name: newStudent.name,
+        email: newStudent.email,
+        rollNo: newStudent.rollNo,
+        branch: newStudent.branch,
+        year: newStudent.year,
+      });
+      setStudents((p) => [created, ...p.filter((s) => s.id !== created.id)]);
+      setIsAddModalOpen(false);
+      setNewStudent({ name: '', email: '', rollNo: '', branch: 'Computer Science & Engineering', year: '3rd Year' });
+    } catch (err) {
+      alert(err.message || 'Failed to create student');
     }
   };
 
-  const handleCsvImport = () => {
-    if (!csvText.trim()) return;
-    const lines = csvText.trim().split('\n');
-    const createdList = [];
-    lines.forEach((l) => {
-      const parts = l.split(',').map((s) => s.trim());
-      if (parts.length >= 2) {
-        createdList.push({
-          id: `usr_s_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-          name: parts[0],
-          email: parts[1],
-          role: 'student',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-          profile: { rollNo: parts[2] || '102303000', branch: parts[3] || 'CSE', year: '3rd Year' }
-        });
+  const handleDelete = async (id) => {
+    if (confirm('Are you sure you want to delete this student record?')) {
+      try {
+        await api.deleteStudent(id);
+        setStudents((p) => p.filter((s) => s.id !== id));
+      } catch (err) {
+        alert(err.message || 'Failed to delete student');
       }
-    });
-    setStudents((p) => [...createdList, ...p]);
-    addAuditLog('STUDENTS_CSV_IMPORT', 'Admin', 'admin', `Batch imported ${createdList.length} students`);
-    setIsCsvModalOpen(false);
-    setCsvText('');
+    }
+  };
+
+  const handleCsvImport = async () => {
+    if (!csvText.trim()) return;
+    try {
+      const res = await api.importStudentsCsv(csvText);
+      if (res.students) {
+        setStudents((p) => [...res.students, ...p]);
+      } else {
+        const studs = await api.getStudents();
+        if (studs) setStudents(studs);
+      }
+      alert('Successfully imported students!');
+      setIsCsvModalOpen(false);
+      setCsvText('');
+    } catch (err) {
+      alert(err.message || 'CSV import failed');
+    }
   };
 
   return (
@@ -3237,7 +3386,7 @@ function AdminStudentsPage() {
 
 // Admin: Manage Professors
 function AdminProfessorsPage() {
-  const { professors, setProfessors, addAuditLog } = useApp();
+  const { professors, setProfessors } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newProf, setNewProf] = useState({
@@ -3249,35 +3398,36 @@ function AdminProfessorsPage() {
     officeLocation: ''
   });
 
-  const filtered = professors.filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.profile?.teacherCode?.includes(searchTerm));
+  const filtered = professors.filter((p) => p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.profile?.teacherCode?.includes(searchTerm));
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
-    const created = {
-      id: `usr_p_${Date.now()}`,
-      name: newProf.name,
-      email: newProf.email,
-      role: 'professor',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      profile: {
-        teacherCode: newProf.teacherCode || `TCH-${Date.now().toString().slice(-4)}`,
+    try {
+      const created = await api.createProfessor({
+        name: newProf.name,
+        email: newProf.email,
+        teacherCode: newProf.teacherCode,
         department: newProf.department,
         designation: newProf.designation,
-        officeLocation: newProf.officeLocation || 'Faculty Wing',
-        officeHours: 'Mon & Wed: 03:00 PM - 05:00 PM',
-        bio: 'Faculty researcher.',
-        isOnline: true
-      }
-    };
-    setProfessors((p) => [created, ...p]);
-    addAuditLog('PROFESSOR_ADDED', 'Admin', 'admin', `Added professor ${created.name} (${created.profile.teacherCode})`);
-    setIsAddModalOpen(false);
+        officeLocation: newProf.officeLocation,
+      });
+      setProfessors((p) => [created, ...p.filter((x) => x.id !== created.id)]);
+      setIsAddModalOpen(false);
+      setNewProf({ name: '', email: '', teacherCode: '', department: 'CSED', designation: 'ASSOCIATE', officeLocation: '' });
+    } catch (err) {
+      alert(err.message || 'Failed to add professor');
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Are you sure you want to delete this faculty member?')) {
-      setProfessors((p) => p.filter((x) => x.id !== id));
-      addAuditLog('PROFESSOR_REMOVED', 'Admin', 'admin', `Removed faculty member #${id}`);
+      try {
+        const res = await api.deleteProfessor(id);
+        setProfessors((p) => p.filter((x) => x.id !== id));
+        if (res.message) alert(res.message);
+      } catch (err) {
+        alert(err.message || 'Failed to remove professor');
+      }
     }
   };
 
@@ -3355,37 +3505,111 @@ function AdminProfessorsPage() {
 
 // Admin: Manage Classrooms
 function AdminClassroomsPage() {
-  const { classrooms, setClassrooms, addAuditLog } = useApp();
+  const { classrooms, setClassrooms } = useApp();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [formError, setFormError] = useState('');
   const [newRoom, setNewRoom] = useState({
+    id: null,
     name: '',
     block: 'Block B',
     floor: 'Ground Floor',
     capacity: 100,
-    code: 'LT105',
+    code: '',
     type: 'LECTURE HALL',
     location: 'Academic Central'
   });
 
-  const handleAdd = (e) => {
-    e.preventDefault();
-    const created = {
-      id: `cls-${Date.now()}`,
-      ...newRoom,
-      capacity: parseInt(newRoom.capacity),
-      image: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=600&auto=format&fit=crop&q=80',
-      amenities: ['Central Air Conditioned', 'Smart Projector'],
-      directions: 'Direct central corridor access.'
-    };
-    setClassrooms((p) => [created, ...p]);
-    addAuditLog('CLASSROOM_CREATED', 'Admin', 'admin', `Created classroom ${created.name} (${created.code})`);
-    setIsAddModalOpen(false);
+  const openAddModal = () => {
+    setFormError('');
+    setNewRoom({
+      id: null,
+      name: '',
+      block: 'Block B',
+      floor: 'Ground Floor',
+      capacity: 100,
+      code: '',
+      type: 'LECTURE HALL',
+      location: 'Academic Central'
+    });
+    setIsAddModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleEdit = (c) => {
+    setFormError('');
+    setNewRoom({
+      id: c.id,
+      name: c.name,
+      block: c.block,
+      floor: c.floor,
+      capacity: c.capacity,
+      code: c.code,
+      type: c.type || 'LECTURE HALL',
+      location: c.location || `${c.block} • Room ${c.code}`
+    });
+    setIsAddModalOpen(true);
+  };
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    setFormError('');
+    try {
+      let result;
+      if (newRoom.id) {
+        result = await api.updateClassroom(newRoom.id, {
+          name: newRoom.name,
+          code: newRoom.code ? newRoom.code.trim() : undefined,
+          type: newRoom.type,
+          block: newRoom.block,
+          floor: newRoom.floor,
+          capacity: parseInt(newRoom.capacity),
+          location: newRoom.location || 'Campus Center'
+        });
+      } else {
+        result = await api.createClassroom({
+          name: newRoom.name,
+          code: newRoom.code ? newRoom.code.trim() : undefined,
+          type: newRoom.type,
+          block: newRoom.block,
+          floor: newRoom.floor,
+          capacity: parseInt(newRoom.capacity),
+          location: newRoom.location || 'Campus Center'
+        });
+      }
+      const freshList = await api.getClassrooms().catch(() => null);
+      if (freshList) {
+        setClassrooms([result, ...freshList.filter((c) => c.id !== result.id)]);
+      } else {
+        setClassrooms((p) => [result, ...p.filter((c) => c.id !== result.id)]);
+      }
+      setNewRoom({
+        id: null,
+        name: '',
+        block: 'Block B',
+        floor: 'Ground Floor',
+        capacity: 100,
+        code: '',
+        type: 'LECTURE HALL',
+        location: 'Academic Central'
+      });
+      setIsAddModalOpen(false);
+    } catch (err) {
+      setFormError(err.message || 'Failed to save classroom details');
+    }
+  };
+
+  const handleDelete = async (id) => {
     if (confirm('Delete this classroom?')) {
-      setClassrooms((p) => p.filter((c) => c.id !== id));
-      addAuditLog('CLASSROOM_DELETED', 'Admin', 'admin', `Deleted classroom #${id}`);
+      try {
+        await api.deleteClassroom(id);
+        const freshList = await api.getClassrooms().catch(() => null);
+        if (freshList) {
+          setClassrooms(freshList);
+        } else {
+          setClassrooms((p) => p.filter((c) => c.id !== id));
+        }
+      } catch (err) {
+        alert(err.message || 'Failed to delete classroom');
+      }
     }
   };
 
@@ -3396,7 +3620,7 @@ function AdminClassroomsPage() {
           <h1 className="headline-lg text-primary">Manage Classrooms & Labs</h1>
           <p className="body-md text-secondary mt-0.5">Physical halls, computing labs, and workshop spaces</p>
         </div>
-        <button onClick={() => setIsAddModalOpen(true)} className="btn-primary text-xs">
+        <button onClick={openAddModal} className="btn-primary text-xs">
           + Add Classroom
         </button>
       </div>
@@ -3421,7 +3645,10 @@ function AdminClassroomsPage() {
                 <td className="p-3"><span className="chip-academic text-[10px]">{c.type}</span></td>
                 <td className="p-3 text-secondary/70">{c.block} • {c.floor}</td>
                 <td className="p-3 font-bold text-secondary">{c.capacity}</td>
-                <td className="p-3 text-right">
+                <td className="p-3 text-right whitespace-nowrap">
+                  <button onClick={() => handleEdit(c)} className="text-primary hover:underline p-1 bg-transparent border-none cursor-pointer font-medium mr-2">
+                    Edit
+                  </button>
                   <button onClick={() => handleDelete(c.id)} className="text-red-700 hover:underline p-1 bg-transparent border-none cursor-pointer">
                     Delete
                   </button>
@@ -3436,19 +3663,42 @@ function AdminClassroomsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div onClick={() => setIsAddModalOpen(false)} className="fixed inset-0 bg-secondary/50" />
           <div className="relative bg-surface w-full max-w-md border border-neutral p-6 shadow-xl z-10 flex flex-col gap-3">
-            <h3 className="title-md text-primary">Add Room</h3>
+            <h3 className="title-md text-primary">{newRoom.id ? 'Edit Classroom Details' : 'Add Room'}</h3>
+            {formError && (
+              <div className="p-2.5 text-xs text-red-700 bg-red-50 border border-red-200">
+                {formError}
+              </div>
+            )}
             <form onSubmit={handleAdd} className="flex flex-col gap-3">
-              <input type="text" placeholder="Room Name (e.g. LT 105)" required value={newRoom.name} onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })} className="input-academic w-full" />
-              <input type="text" placeholder="Room Code (e.g. LT105)" required value={newRoom.code} onChange={(e) => setNewRoom({ ...newRoom, code: e.target.value })} className="input-academic w-full" />
-              <select value={newRoom.type} onChange={(e) => setNewRoom({ ...newRoom, type: e.target.value })} className="input-academic w-full">
-                <option value="LECTURE HALL">LECTURE HALL</option>
-                <option value="LAB">LAB</option>
-              </select>
-              <input type="text" placeholder="Block (e.g. Block B)" value={newRoom.block} onChange={(e) => setNewRoom({ ...newRoom, block: e.target.value })} className="input-academic w-full" />
-              <input type="number" placeholder="Capacity (e.g. 120)" value={newRoom.capacity} onChange={(e) => setNewRoom({ ...newRoom, capacity: e.target.value })} className="input-academic w-full" />
+              <div>
+                <label className="text-[11px] font-medium text-secondary block mb-1">Room Name *</label>
+                <input type="text" placeholder="e.g. Lecture Theatre 105" required value={newRoom.name} onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })} className="input-academic w-full" />
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-secondary block mb-1">Room Code (Leave blank to auto-generate)</label>
+                <input type="text" placeholder="e.g. LT105" value={newRoom.code} onChange={(e) => setNewRoom({ ...newRoom, code: e.target.value })} className="input-academic w-full" />
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-secondary block mb-1">Type</label>
+                <select value={newRoom.type} onChange={(e) => setNewRoom({ ...newRoom, type: e.target.value })} className="input-academic w-full">
+                  <option value="LECTURE HALL">LECTURE HALL</option>
+                  <option value="LAB">LAB</option>
+                  <option value="CLASSROOM">CLASSROOM</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-medium text-secondary block mb-1">Block</label>
+                  <input type="text" placeholder="e.g. Block B" value={newRoom.block} onChange={(e) => setNewRoom({ ...newRoom, block: e.target.value })} className="input-academic w-full" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-secondary block mb-1">Capacity</label>
+                  <input type="number" placeholder="e.g. 120" value={newRoom.capacity} onChange={(e) => setNewRoom({ ...newRoom, capacity: e.target.value })} className="input-academic w-full" />
+                </div>
+              </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setIsAddModalOpen(false)} className="btn-secondary text-xs">Cancel</button>
-                <button type="submit" className="btn-primary text-xs">Save Room</button>
+                <button type="submit" className="btn-primary text-xs">{newRoom.id ? 'Save Changes' : 'Save Room'}</button>
               </div>
             </form>
           </div>
@@ -3460,12 +3710,16 @@ function AdminClassroomsPage() {
 
 // Admin: Master Meeting Requests
 function AdminRequestsPage() {
-  const { meetingRequests, setMeetingRequests, addAuditLog } = useApp();
+  const { meetingRequests, setMeetingRequests } = useApp();
 
-  const handleCancelOverride = (id) => {
+  const handleCancelOverride = async (id) => {
     if (confirm('Cancel this consultation request?')) {
-      setMeetingRequests((p) => p.map((r) => r.id === id ? { ...r, status: 'cancelled' } : r));
-      addAuditLog('ADMIN_CANCEL_REQUEST', 'Admin', 'admin', `Admin cancelled request #${id}`);
+      try {
+        await api.cancelRequest(id);
+        setMeetingRequests((p) => p.map((r) => (r.id === id ? { ...r, status: 'cancelled' } : r)));
+      } catch (err) {
+        alert(err.message || 'Failed to cancel request');
+      }
     }
   };
 
@@ -3564,7 +3818,7 @@ function AdminTimetablesPage() {
               <tr key={slot}>
                 <td className="p-2 font-mono text-[11px] bg-muted/30 whitespace-nowrap">{slot}</td>
                 {daysOfWeek.slice(0, 5).map((d) => {
-                  const entry = ownerTimetable.find((t) => t.day.toLowerCase() === d.toLowerCase() && t.periodIndex === pIdx);
+                  const entry = ownerTimetable.find((t) => matchDay(t.day, d) && t.periodIndex === pIdx);
                   return (
                     <td key={d} className="p-1.5 border-l border-neutral text-center h-12">
                       {entry ? (
@@ -3589,29 +3843,34 @@ function AdminTimetablesPage() {
 
 // Admin: Departments Management
 function AdminDepartmentsPage() {
-  const { departments, setDepartments, addAuditLog } = useApp();
+  const { departments, setDepartments } = useApp();
   const [newDeptName, setNewDeptName] = useState('');
   const [newDeptCode, setNewDeptCode] = useState('');
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (!newDeptName) return;
-    const created = {
-      id: `dept-${Date.now()}`,
-      name: newDeptName,
-      fullName: newDeptName,
-      code: newDeptCode || newDeptName.slice(0, 3).toUpperCase()
-    };
-    setDepartments((p) => [...p, created]);
-    addAuditLog('DEPARTMENT_ADDED', 'Admin', 'admin', `Added academic department: ${created.name}`);
-    setNewDeptName('');
-    setNewDeptCode('');
+    try {
+      const created = await api.createDepartment({
+        name: newDeptName,
+        code: newDeptCode || newDeptName.slice(0, 3).toUpperCase()
+      });
+      setDepartments((p) => [...p, created]);
+      setNewDeptName('');
+      setNewDeptCode('');
+    } catch (err) {
+      alert(err.message || 'Failed to create department');
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Delete this department?')) {
-      setDepartments((p) => p.filter((d) => d.id !== id));
-      addAuditLog('DEPARTMENT_DELETED', 'Admin', 'admin', `Deleted department #${id}`);
+      try {
+        await api.deleteDepartment(id);
+        setDepartments((p) => p.filter((d) => d.id !== id));
+      } catch (err) {
+        alert(err.message || 'Failed to delete department');
+      }
     }
   };
 

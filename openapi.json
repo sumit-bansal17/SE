@@ -1,0 +1,413 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TIET-Sync Academic API",
+    "description": "Comprehensive REST API for TIET-Sync student-professor consultation scheduler, classroom directory, and academic workstation.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5050/api",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "token"
+      }
+    }
+  },
+  "security": [
+    { "bearerAuth": [] },
+    { "cookieAuth": [] }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Register a new student or professor",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "example": "student@thapar.edu" },
+                  "password": { "type": "string", "minLength": 6 },
+                  "role": { "type": "string", "enum": ["STUDENT", "PROFESSOR"] },
+                  "profile": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User created successfully" },
+          "409": { "description": "Email already exists" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Authenticate user and issue JWT token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Authentication successful" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Clear session cookie",
+        "responses": {
+          "200": { "description": "Logged out" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Get authenticated user profile",
+        "responses": {
+          "200": { "description": "Current user profile" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "patch": {
+        "summary": "Change password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["oldPassword", "newPassword"],
+                "properties": {
+                  "oldPassword": { "type": "string" },
+                  "newPassword": { "type": "string", "minLength": 6 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Password updated" },
+          "400": { "description": "Incorrect old password" }
+        }
+      }
+    },
+    "/professors": {
+      "get": {
+        "summary": "Search & filter faculty members",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "department", "in": "query", "schema": { "type": "string" } },
+          { "name": "sort", "in": "query", "schema": { "type": "string", "enum": ["az", "dept"] } }
+        ],
+        "responses": {
+          "200": { "description": "List of professors" }
+        }
+      }
+    },
+    "/professors/{id}": {
+      "get": {
+        "summary": "Get professor profile with office hours",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Professor detail" },
+          "404": { "description": "Professor not found" }
+        }
+      }
+    },
+    "/professors/me": {
+      "patch": {
+        "summary": "Professor edits own profile",
+        "responses": {
+          "200": { "description": "Updated profile" }
+        }
+      }
+    },
+    "/classrooms": {
+      "get": {
+        "summary": "Search & filter classrooms, halls, and labs",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "block", "in": "query", "schema": { "type": "string" } },
+          { "name": "type", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Classrooms list" }
+        }
+      }
+    },
+    "/classrooms/{id}": {
+      "get": {
+        "summary": "Get classroom details by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Classroom detail" }
+        }
+      }
+    },
+    "/timetable/me": {
+      "get": {
+        "summary": "Get authenticated user weekly timetable",
+        "responses": {
+          "200": { "description": "Timetable entries" }
+        }
+      }
+    },
+    "/timetable/me/cell": {
+      "put": {
+        "summary": "Upsert a single period slot in weekly timetable",
+        "responses": {
+          "200": { "description": "Slot saved" }
+        }
+      }
+    },
+    "/timetable/me/cell/{id}": {
+      "delete": {
+        "summary": "Delete a timetable slot",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Slot removed" }
+        }
+      }
+    },
+    "/timetable/me/import": {
+      "post": {
+        "summary": "Batch import timetable from CSV or array",
+        "responses": {
+          "200": { "description": "Timetable imported" }
+        }
+      }
+    },
+    "/timetable/professors/{id}/timetable": {
+      "get": {
+        "summary": "Public timetable for professor",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Professor schedule" }
+        }
+      }
+    },
+    "/timetable/professors/{id}/availability": {
+      "get": {
+        "summary": "Compute free and busy consultation slots dynamically",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "date", "in": "query", "required": true, "schema": { "type": "string", "example": "2026-12-01" } }
+        ],
+        "responses": {
+          "200": { "description": "Availability slot status breakdown" }
+        }
+      }
+    },
+    "/timetable/office-hours": {
+      "post": {
+        "summary": "Professor adds office hours",
+        "responses": { "201": { "description": "Office hour created" } }
+      }
+    },
+    "/timetable/blocked-dates": {
+      "post": {
+        "summary": "Professor blocks a date for leave/conferences",
+        "responses": { "201": { "description": "Date blocked" } }
+      }
+    },
+    "/requests": {
+      "get": {
+        "summary": "List meeting requests with filters",
+        "responses": { "200": { "description": "List of meeting requests" } }
+      },
+      "post": {
+        "summary": "Student creates meeting request with conflict check and file upload",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["professorId", "date", "timeSlot", "reason"],
+                "properties": {
+                  "professorId": { "type": "string" },
+                  "date": { "type": "string", "example": "2026-12-01" },
+                  "timeSlot": { "type": "string", "example": "8:50-9:40" },
+                  "reason": { "type": "string" },
+                  "type": { "type": "string" },
+                  "attachment": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Request submitted" },
+          "409": { "description": "Slot conflict detected" }
+        }
+      }
+    },
+    "/requests/{id}/accept": {
+      "patch": {
+        "summary": "Professor accepts request (locks slot with double booking check)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Request accepted" },
+          "409": { "description": "Double booking rejected" }
+        }
+      }
+    },
+    "/requests/{id}/reject": {
+      "patch": {
+        "summary": "Professor declines request with remark",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Request rejected" }
+        }
+      }
+    },
+    "/requests/{id}/suggest-time": {
+      "patch": {
+        "summary": "Professor proposes alternate consultation time",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Reschedule proposed" }
+        }
+      }
+    },
+    "/requests/{id}/cancel": {
+      "patch": {
+        "summary": "Cancel consultation request",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Request cancelled" }
+        }
+      }
+    },
+    "/requests/{id}/attachment": {
+      "get": {
+        "summary": "Securely download project synopsis attachment",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Attachment binary stream" }
+        }
+      }
+    },
+    "/workspace/{ownerId}": {
+      "get": {
+        "summary": "Get workspace tasks, notes, links, files and storage quota",
+        "parameters": [
+          { "name": "ownerId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Workspace items and storage quota info" }
+        }
+      }
+    },
+    "/workspace/{ownerId}/files": {
+      "post": {
+        "summary": "Upload file subject to 20MB quota",
+        "parameters": [
+          { "name": "ownerId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "201": { "description": "File uploaded" },
+          "400": { "description": "Quota exceeded" }
+        }
+      }
+    },
+    "/notifications/{userId}": {
+      "get": {
+        "summary": "Get notifications for user",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "User notifications" }
+        }
+      }
+    },
+    "/dashboard/student": {
+      "get": {
+        "summary": "Aggregated student dashboard metrics",
+        "responses": { "200": { "description": "Student dashboard summary" } }
+      }
+    },
+    "/dashboard/professor": {
+      "get": {
+        "summary": "Aggregated professor desk metrics",
+        "responses": { "200": { "description": "Professor dashboard summary" } }
+      }
+    },
+    "/dashboard/admin": {
+      "get": {
+        "summary": "Aggregated institution admin metrics",
+        "responses": { "200": { "description": "Admin overview summary" } }
+      }
+    },
+    "/admin/students": {
+      "get": { "summary": "Admin lists students", "responses": { "200": { "description": "Students list" } } },
+      "post": { "summary": "Admin adds student", "responses": { "201": { "description": "Student created" } } }
+    },
+    "/admin/students/import": {
+      "post": { "summary": "Admin batch imports students via CSV", "responses": { "200": { "description": "Students imported" } } }
+    },
+    "/admin/professors": {
+      "get": { "summary": "Admin lists professors", "responses": { "200": { "description": "Professors list" } } },
+      "post": { "summary": "Admin adds professor", "responses": { "201": { "description": "Professor added" } } }
+    },
+    "/admin/professors/{id}": {
+      "delete": {
+        "summary": "Admin deletes professor (soft-delete if history exists, hard-delete otherwise)",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Deleted or deactivated" } }
+      }
+    },
+    "/admin/audit-logs": {
+      "get": { "summary": "Admin inspects chronological audit logs", "responses": { "200": { "description": "Audit records" } } }
+    }
+  }
+}

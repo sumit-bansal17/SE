@@ -1,0 +1,158 @@
+{
+  "info": {
+    "name": "TIET-Sync Academic API Collection",
+    "description": "Complete Postman collection for testing and integrating TIET-Sync student, professor, and admin API endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5050/api", "type": "string" },
+    { "key": "token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (Student)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"student@demo.com\",\n  \"password\": \"demo123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login (Professor)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"professor@demo.com\",\n  \"password\": \"demo123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@demo.com\",\n  \"password\": \"demo123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Get Profile (/auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Professors & Availability",
+      "item": [
+        {
+          "name": "Get Professors",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/professors?department=All&sort=az", "host": ["{{baseUrl}}"], "path": ["professors"], "query": [{ "key": "department", "value": "All" }, { "key": "sort", "value": "az" }] }
+          }
+        },
+        {
+          "name": "Get Availability Slots",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/timetable/professors/usr_prof_demo/availability?date=2026-12-01", "host": ["{{baseUrl}}"], "path": ["timetable", "professors", "usr_prof_demo", "availability"], "query": [{ "key": "date", "value": "2026-12-01" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Classrooms",
+      "item": [
+        {
+          "name": "Get Classrooms",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/classrooms", "host": ["{{baseUrl}}"], "path": ["classrooms"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Meeting Requests",
+      "item": [
+        {
+          "name": "Create Meeting Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"usr_student_demo\",\n  \"professorId\": \"usr_prof_demo\",\n  \"date\": \"2026-12-01\",\n  \"timeSlot\": \"8:50-9:40\",\n  \"reason\": \"Project Architecture Guidance\",\n  \"type\": \"PROJECT\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/requests", "host": ["{{baseUrl}}"], "path": ["requests"] }
+          }
+        },
+        {
+          "name": "Accept Request (Lock Slot)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"professorRemark\": \"Accepted. See you in room C-314.\"\n}" },
+            "url": { "raw": "{{baseUrl}}/requests/:id/accept", "host": ["{{baseUrl}}"], "path": ["requests", ":id", "accept"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workspace",
+      "item": [
+        {
+          "name": "Get Workspace Items",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/workspace/usr_student_demo", "host": ["{{baseUrl}}"], "path": ["workspace", "usr_student_demo"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboards",
+      "item": [
+        {
+          "name": "Student Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/dashboard/student", "host": ["{{baseUrl}}"], "path": ["dashboard", "student"] }
+          }
+        },
+        {
+          "name": "Professor Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/dashboard/professor", "host": ["{{baseUrl}}"], "path": ["dashboard", "professor"] }
+          }
+        },
+        {
+          "name": "Admin Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/dashboard/admin", "host": ["{{baseUrl}}"], "path": ["dashboard", "admin"] }
+          }
+        }
+      ]
+    }
+  ]
+}

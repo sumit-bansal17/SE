@@ -1,4 +1,14 @@
 node_modules/
 dist/
+build/
 .DS_Store
 *.local
+.env
+.env.*.local
+uploads/
+*.db
+*.db-journal
+prisma/dev.db
+prisma/dev.db-journal
+coverage/
+.vite/

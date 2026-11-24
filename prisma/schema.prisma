@@ -1,0 +1,238 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("STUDENT") // STUDENT | PROFESSOR | ADMIN
+  avatarUrl    String?
+  status       String   @default("ACTIVE")  // ACTIVE | INACTIVE
+  createdAt    DateTime @default(now())
+
+  studentProfile    StudentProfile?
+  professorProfile  ProfessorProfile?
+  timetableEntries  TimetableEntry[]
+  studentRequests   MeetingRequest[]  @relation("StudentRequests")
+  professorRequests MeetingRequest[]  @relation("ProfessorRequests")
+  notes             Note[]
+  tasks             Task[]
+  links             Link[]
+  fileUploads       FileUpload[]
+  resourcesUploaded Resource[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+}
+
+model StudentProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  rollNo String @unique
+  branch String
+  year   String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProfessorProfile {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  teacherCode    String  @unique
+  departmentId   String
+  designation    String  @default("ASSISTANT") // PROFESSOR | ASSOCIATE | ASSISTANT
+  officeLocation String
+  bio            String  @default("")
+  researchAreas  String  @default("")
+  isOnline       Boolean @default(true)
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department   Department    @relation(fields: [departmentId], references: [id])
+  officeHours  OfficeHour[]
+  blockedDates BlockedDate[]
+}
+
+model Department {
+  id       String             @id @default(cuid())
+  name     String             @unique
+  fullName String?
+  code     String?
+  faculty  ProfessorProfile[]
+}
+
+model Classroom {
+  id               String           @id @default(cuid())
+  name             String
+  block            String
+  floor            String
+  capacity         Int
+  code             String           @unique
+  type             String           @default("CLASSROOM") // LAB | LECTURE_HALL | CLASSROOM
+  imageUrl         String?
+  location         String?
+  amenities        String?
+  directions       String?
+  timetableEntries TimetableEntry[]
+}
+
+model TimetableEntry {
+  id            String  @id @default(cuid())
+  ownerId       String
+  day           Int     // 0-6 (0 = Monday, 6 = Sunday)
+  dayName       String? // "Monday", etc.
+  periodIndex   Int     // 0-12
+  timeSlot      String? // "8:00-8:50", etc.
+  subject       String
+  roomId        String?
+  roomName      String?
+  professorName String?
+  color         String  @default("#640000")
+
+  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  classroom Classroom? @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId])
+}
+
+model OfficeHour {
+  id          String  @id @default(cuid())
+  professorId String
+  day         Int     // 0-6
+  dayName     String?
+  startTime   String  // e.g. "15:00"
+  endTime     String  // e.g. "17:00"
+  isAvailable Boolean @default(true)
+
+  professor ProfessorProfile @relation(fields: [professorId], references: [id], onDelete: Cascade)
+}
+
+model BlockedDate {
+  id          String @id @default(cuid())
+  professorId String
+  date        String // "YYYY-MM-DD"
+  reason      String
+
+  professor ProfessorProfile @relation(fields: [professorId], references: [id], onDelete: Cascade)
+}
+
+model MeetingRequest {
+  id              String   @id @default(cuid())
+  studentId       String
+  professorId     String
+  date            String   // "YYYY-MM-DD"
+  startTime       String   // e.g. "15:30"
+  endTime         String   // e.g. "16:20"
+  timeSlot        String?  // e.g. "3:30-4:20"
+  reason          String
+  meetingType     String   @default("DOUBT") // DOUBT | PROJECT | GUIDANCE | OTHER
+  attachmentUrl   String?
+  attachmentName  String?
+  attachmentSize  Float?   @default(0)
+  status          String   @default("PENDING") // PENDING | ACCEPTED | REJECTED | CANCELLED | RESCHEDULE_PROPOSED
+  professorRemark String?
+  proposedDate    String?
+  proposedStart   String?
+  proposedEnd     String?
+  proposedSlot    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  student   User @relation("StudentRequests", fields: [studentId], references: [id], onDelete: Cascade)
+  professor User @relation("ProfessorRequests", fields: [professorId], references: [id], onDelete: Cascade)
+
+  @@index([professorId, date])
+  @@index([studentId, status])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  done      Boolean  @default(false)
+  dueDate   String?
+  category  String   @default("General")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Link {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  url       String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FileUpload {
+  id        String   @id @default(cuid())
+  ownerId   String
+  fileName  String
+  url       String
+  sizeBytes Int
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model Resource {
+  id           String   @id @default(cuid())
+  title        String
+  category     String   @default("General")
+  url          String?
+  fileUrl      String?
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   @default("INFO")
+  title     String?
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actorName String?
+  actorRole String?
+  action    String
+  entity    String
+  entityId  String?
+  details   String   // JSON string
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+}
