@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TIET-Sync Academic API Server | Port {{PORT}}</title>
+  <link rel="icon" type="image/webp" href="/images/tiet-sync-location-pin-logo.webp">
+  <link rel="stylesheet" href="/css/tiet-sync.css">
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-container">
+      <a href="/" class="topbar-brand">
+        <img src="/images/tiet-sync-location-pin-logo.webp" alt="TIET-Sync Logo" class="topbar-logo">
+        <div class="topbar-title-group">
+          <span class="topbar-title">TIET-Sync</span>
+          <span class="topbar-subtitle">CAMPUS OS</span>
+        </div>
+      </a>
+      <div class="topbar-actions">
+        <a href="/docs" class="btn-outline-docs">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          API Docs
+        </a>
+        <a href="{{CLIENT_URL}}" class="btn-topbar-app" target="_blank" rel="noopener noreferrer">
+          Open Web App
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-wrapper">
+
+    <!-- Status Badge -->
+    <div class="status-badge-wrapper">
+      <div id="statusBadge" class="status-badge">
+        <span class="status-dot"></span>
+        <span id="statusText">Backend API Server Operational</span>
+      </div>
+    </div>
+
+    <!-- Title and Description -->
+    <section class="hero-header">
+      <h1 class="hero-title">TIET-Sync Academic API Server</h1>
+      <p class="hero-description">
+        The Node.js + Express + TypeScript backend is running on <strong>port {{PORT}}</strong>. All API routes and models are active and connected to the database.
+      </p>
+      <div class="hero-meta">
+        <span>Version: <strong>v{{VERSION}}</strong></span>
+        <span>•</span>
+        <span>Environment: <strong>{{ENV}}</strong></span>
+        <span>•</span>
+        <span id="metaUptime">Uptime: <strong>Calculating...</strong></span>
+      </div>
+    </section>
+
+    <!-- Web App Callout Card -->
+    <section class="card-callout">
+      <div class="card-callout-text">
+        <h2>Looking for the TIET-Sync Web Application?</h2>
+        <p>The React user interface runs on port 3000.</p>
+      </div>
+      <a href="{{CLIENT_URL}}" class="btn-open-app" target="_blank" rel="noopener noreferrer">
+        Open TIET-Sync Web App (Port 3000)
+        <span class="btn-arrow">&rarr;</span>
+      </a>
+    </section>
+
+    <!-- Two Info Cards -->
+    <div class="cards-grid">
+
+      <!-- Live API Endpoints Card -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <span class="info-card-label">LIVE API ENDPOINTS</span>
+        </div>
+        <div class="info-card-body">
+          <ul class="endpoints-list">
+            <li class="endpoint-item">
+              <span class="badge-method">GET</span>
+              <a href="/api/health" target="_blank" class="endpoint-link">/api/health</a>
+            </li>
+            <li class="endpoint-item">
+              <span class="badge-method">GET</span>
+              <a href="/api/professors" target="_blank" class="endpoint-link">/api/professors</a>
+            </li>
+            <li class="endpoint-item">
+              <span class="badge-method">GET</span>
+              <a href="/api/classrooms" target="_blank" class="endpoint-link">/api/classrooms</a>
+            </li>
+            <li class="endpoint-item">
+              <span class="badge-method">GET</span>
+              <a href="/api/resources" target="_blank" class="endpoint-link">/api/resources</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Demo Accounts Card (Hidden in Production) -->
+      {{DEMO_ACCOUNTS_SECTION}}
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="page-footer">
+    Thapar Institute of Engineering & Technology &bull; TIET-Sync Engine
+  </footer>
+
+  <!-- Live Health Check Script -->
+  <script>
+    (function checkHealth() {
+      const startTime = performance.now();
+      fetch('/api/health')
+        .then(function(res) {
+          if (!res.ok) throw new Error('Health check failed: ' + res.status);
+          return res.json();
+        })
+        .then(function(data) {
+          const badge = document.getElementById('statusBadge');
+          const text = document.getElementById('statusText');
+          const uptimeEl = document.getElementById('metaUptime');
+          
+          if (data.status === 'ok') {
+            badge.className = 'status-badge';
+            text.textContent = 'Backend API Server Operational';
+          } else {
+            badge.className = 'status-badge error';
+            text.textContent = 'Degraded / Database down';
+          }
+
+          if (uptimeEl && data.timestamp) {
+            const serverDate = new Date(data.timestamp);
+            uptimeEl.innerHTML = 'Status: <strong style="color:#1B6B3A;">Active</strong>';
+          }
+        })
+        .catch(function(err) {
+          console.warn('[TIET-Sync] Health check failed:', err);
+          const badge = document.getElementById('statusBadge');
+          const text = document.getElementById('statusText');
+          if (badge && text) {
+            badge.className = 'status-badge error';
+            text.textContent = 'Degraded / Database down';
+          }
+        });
+    })();
+  </script>
+
+</body>
+</html>

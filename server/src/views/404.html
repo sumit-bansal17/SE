@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 Not Found | TIET-Sync API Server</title>
+  <link rel="icon" type="image/webp" href="/images/tiet-sync-location-pin-logo.webp">
+  <link rel="stylesheet" href="/css/tiet-sync.css">
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-container">
+      <a href="/" class="topbar-brand">
+        <img src="/images/tiet-sync-location-pin-logo.webp" alt="TIET-Sync Logo" class="topbar-logo">
+        <div class="topbar-title-group">
+          <span class="topbar-title">TIET-Sync</span>
+          <span class="topbar-subtitle">CAMPUS OS</span>
+        </div>
+      </a>
+      <div class="topbar-actions">
+        <a href="/docs" class="btn-outline-docs">API Docs</a>
+        <a href="{{CLIENT_URL}}" class="btn-topbar-app" target="_blank" rel="noopener noreferrer">
+          Open Web App
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Error Content -->
+  <main class="main-wrapper">
+    <div class="error-hero">
+      <div class="error-code">404</div>
+      <h1 class="error-title">Page or Endpoint Not Found</h1>
+      <p class="error-message">
+        The requested URL <code>{{REQUEST_PATH}}</code> does not exist on the TIET-Sync API Server.
+        All REST API endpoints are prefixed with <code>/api/*</code>.
+      </p>
+      <div style="display:flex; gap:12px; justify-content:center; margin-top:8px;">
+        <a href="/" class="btn-back-home">&larr; Back to Home</a>
+        <a href="{{CLIENT_URL}}" class="btn-open-app" target="_blank" rel="noopener noreferrer">
+          Open Web App (Port 3000) &rarr;
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="page-footer">
+    Thapar Institute of Engineering & Technology &bull; TIET-Sync Engine
+  </footer>
+
+</body>
+</html>
